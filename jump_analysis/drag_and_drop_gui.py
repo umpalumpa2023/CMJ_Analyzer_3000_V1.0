@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 from video_processor import process_jump_video
 from config import MODEL_PATH
 from yolo_detector import YOLODetector
@@ -41,12 +41,9 @@ class JumpAnalysisApp:
             self.analyze_video(file_path)
 
     def analyze_video(self, file_path):
-        """
-        Processes the video and displays the results.
-        """
         try:
             user_height = float(
-                messagebox.askstring(
+                simpledialog.askstring(
                     "User Height", "Enter the user's height in meters:"
                 )
             )
@@ -54,17 +51,20 @@ class JumpAnalysisApp:
                 raise ValueError("Height must be a positive number.")
 
             # Analyze the video
-            flight_time, jump_height = process_jump_video(file_path, self.yolo_detector, user_height)
+            jumps = process_jump_video(file_path, self.yolo_detector, user_height)
 
             # Display the results
-            if flight_time > 0:
-                result_text = f"Flight Time: {flight_time:.2f} seconds\nJump Height: {jump_height:.2f} meters"
+            if jumps:
+                result_text = f"Total Jumps Detected: {len(jumps)}\n"
+                for i, jump in enumerate(jumps, start=1):
+                    result_text += f"Jump {i}: Flight Time = {jump['flight_time']:.2f}s, Height = {jump['jump_height']:.2f}m\n"
             else:
-                result_text = "No valid jump detected."
+                result_text = "No valid jumps detected."
 
             self.result_label.config(text=result_text)
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
 
     def run(self):
         """

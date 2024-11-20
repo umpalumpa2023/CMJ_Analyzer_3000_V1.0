@@ -1,14 +1,21 @@
 import cv2
-from jump_analysis.jump_metrics import calculate_jump_height
-from jump_analysis.utils import check_takeoff_condition, check_landing_condition
+from jump_metrics import calculate_jump_height
+from utils import check_takeoff_condition, check_landing_condition
 
 def process_jump_video(video_path, yolo_detector, user_height):
     cap = cv2.VideoCapture(video_path)
     fps = int(cap.get(cv2.CAP_PROP_FPS))
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     print(f"Processing video: {video_path}")
     print(f"Total frames: {frame_count}, FPS: {fps}")
+
+    # Output video writer
+    output_path = "output_detected_video.mp4"
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
 
     jumps = []  # List to store data for all detected jumps
     jump_detected = False
@@ -22,35 +29,43 @@ def process_jump_video(video_path, yolo_detector, user_height):
         current_frame = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
         timestamp = current_frame / fps
 
-        # Run YOLO detection
-        keypoints = yolo_detector.detect_keypoints(frame)
+        # Run YOLO detection to get keypoints
+        keypoints_list = yolo_detector.detect_keypoints(frame)
 
-        if not jump_detected and check_takeoff_condition(keypoints):
-            jump_detected = True
-            takeoff_frame = current_frame
-            print(f"Takeoff detected at frame {current_frame}, time {timestamp:.2f}s")
+        for keypoints in keypoints_list:
+            # Draw keypoints and other visualizations on the frame
+            frame = draw_keypoints(frame, keypoints)  # Add this function
 
-        if jump_detected and check_landing_condition(keypoints):
-            landing_frame = current_frame
-            flight_time = (landing_frame - takeoff_frame) / fps
-            jump_height = calculate_jump_height(flight_time)
+            if not jump_detected and check_takeoff_condition(keypoints):
+                jump_detected = True
+                takeoff_frame = current_frame
+                print(f"Takeoff detected at frame {current_frame}, time {timestamp:.2f}s")
 
-            print(f"Landing detected at frame {landing_frame}, time {timestamp:.2f}s")
-            print(f"Jump detected: Flight Time = {flight_time:.2f}s, Height = {jump_height:.2f}m")
+            if jump_detected and check_landing_condition(keypoints):
+                landing_frame = current_frame
+                flight_time = (landing_frame - takeoff_frame) / fps
+                jump_height = calculate_jump_height(flight_time)
 
-            # Save jump metrics
-            jumps.append({
-                "takeoff_frame": takeoff_frame,
-                "landing_frame": landing_frame,
-                "flight_time": flight_time,
-                "jump_height": jump_height
-            })
+                print(f"Landing detected at frame {landing_frame}, time {timestamp:.2f}s")
+                print(f"Jump detected: Flight Time = {flight_time:.2f}s, Height = {jump_height:.2f}m")
 
-            # Reset for the next jump
-            jump_detected = False
-            takeoff_frame, landing_frame = None, None
+                # Save jump metrics
+                jumps.append({
+                    "takeoff_frame": takeoff_frame,
+                    "landing_frame": landing_frame,
+                    "flight_time": flight_time,
+                    "jump_height": jump_height
+                })
+
+                # Reset for the next jump
+                jump_detected = False
+                takeoff_frame, landing_frame = None, None
+
+        # Write the processed frame to the output video
+        out.write(frame)
 
     cap.release()
+    out.release()
 
     if jumps:
         print(f"Total Jumps Detected: {len(jumps)}")
@@ -59,4 +74,5 @@ def process_jump_video(video_path, yolo_detector, user_height):
     else:
         print("No valid jumps detected.")
 
+    print(f"Detection video saved to: {output_path}")
     return jumps

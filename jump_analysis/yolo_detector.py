@@ -5,8 +5,13 @@ class YOLODetector:
         self.model = YOLO(model_path)
 
     def detect_keypoints(self, frame):
+        # Run YOLO detection on the frame
         results = self.model(frame)
         keypoints = []
-        for result in results.xyxy:
-            keypoints = result.keypoints.cpu().numpy() if result.keypoints else []
-        return keypoints
+
+        # Iterate through the results to extract keypoints
+        for result in results:
+            if hasattr(result, 'keypoints') and result.keypoints is not None:
+                keypoints.append(result.keypoints.cpu().numpy())
+        
+        return keypoints  # Return all keypoints as a list
