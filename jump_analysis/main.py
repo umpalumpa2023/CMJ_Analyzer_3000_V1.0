@@ -10,7 +10,7 @@ if __name__ == "__main__":
     yolo_detector = YOLODetector(MODEL_PATH)
 
     # User-provided height
-    user_height = float(input("Enter the user's height in meters: "))
+    user_height = 1.78#float(input("Enter the user's height in meters: "))
     if user_height <= 0:
         raise ValueError("Height must be a positive number.")
 
