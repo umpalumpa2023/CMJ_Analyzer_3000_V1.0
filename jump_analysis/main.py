@@ -4,7 +4,8 @@ from config import MODEL_PATH
 
 if __name__ == "__main__":
     # Define the video file path
-    video_path = "C:\Users\Sam\Desktop\CMJ_Analyzer_3000_V1.0\jump_analysis\CMJ_01_001_Seite.MP4"  # Replace with your actual video file name
+    video_path = "jump_analysis/CMJ_01_001_Seite.MP4"  
+    # Replace with your actual video file name
 
     # Load YOLO model
     yolo_detector = YOLODetector(MODEL_PATH)
