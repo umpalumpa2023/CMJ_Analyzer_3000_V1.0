@@ -1,6 +1,6 @@
 import cv2
-from jump_analysis.jump_metrics import calculate_jump_height
-from jump_analysis.utils import check_takeoff_condition, check_landing_condition
+from jump_metrics import calculate_jump_height
+from utils import check_takeoff_condition, check_landing_condition
 
 def process_jump_video(video_path, yolo_detector, user_height):
     cap = cv2.VideoCapture(video_path)

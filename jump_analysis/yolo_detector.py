@@ -7,6 +7,10 @@ class YOLODetector:
     def detect_keypoints(self, frame):
         results = self.model(frame)
         keypoints = []
-        for result in results.xyxy:
-            keypoints = result.keypoints.cpu().numpy() if result.keypoints else []
+
+        # Loop through detections in results
+        for result in results:
+            if hasattr(result, 'keypoints') and result.keypoints is not None:
+                keypoints.extend(result.keypoints.cpu().numpy())
+
         return keypoints

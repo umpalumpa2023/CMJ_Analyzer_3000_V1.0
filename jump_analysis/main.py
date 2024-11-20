@@ -1,10 +1,10 @@
-from jump_analysis.video_processor import process_jump_video
-from jump_analysis.yolo_detector import YOLODetector
-from jump_analysis.config import MODEL_PATH
+from video_processor import process_jump_video
+from yolo_detector import YOLODetector
+from config import MODEL_PATH
 
 if __name__ == "__main__":
     # Define the video file path
-    video_path = "data/sample_jump_video.mp4"  # Replace with your actual video file name
+    video_path = "/Users/simonpartl/MCI/5.Semester/Projekt/CMJ_Analyzer_3000_V1.0/CMJ_01_001_Seite.MP4"  # Replace with your actual video file name
 
     # Load YOLO model
     yolo_detector = YOLODetector(MODEL_PATH)
