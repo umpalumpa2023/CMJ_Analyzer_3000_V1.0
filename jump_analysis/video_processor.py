@@ -1,11 +1,13 @@
 import cv2
 from jump_metrics import calculate_jump_height
-from utils import check_takeoff_condition, check_landing_condition
+from utils import JumpAnalyzer
+
 
 def process_jump_video(video_path, yolo_detector, user_height):
     cap = cv2.VideoCapture(video_path)
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    jump_analyzer = JumpAnalyzer()
 
     print(f"Processing video: {video_path}")
     print(f"Total frames: {frame_count}, FPS: {fps}")
@@ -25,12 +27,12 @@ def process_jump_video(video_path, yolo_detector, user_height):
         # Run YOLO detection
         keypoints = yolo_detector.detect_keypoints(frame)
 
-        if not jump_detected and check_takeoff_condition(keypoints):
+        if not jump_detected and jump_analyzer.check_takeoff_condition(keypoints):
             jump_detected = True
             takeoff_frame = current_frame
             print(f"Takeoff detected at frame {current_frame}, time {timestamp:.2f}s")
 
-        if jump_detected and check_landing_condition(keypoints):
+        if jump_detected and jump_analyzer.check_landing_condition(keypoints):
             landing_frame = current_frame
             flight_time = (landing_frame - takeoff_frame) / fps
             jump_height = calculate_jump_height(flight_time)

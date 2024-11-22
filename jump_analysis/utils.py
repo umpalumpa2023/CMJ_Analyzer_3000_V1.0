@@ -1,13 +1,36 @@
-baseline_hip_y = None
-tolerance = 0.075  # % tolerance
+class JumpAnalyzer:
+    def __init__(self, tolerance=0.075, max_baseline_frames=5):
+        """
+        Initialize the JumpAnalyzer class with parameters for jump detection.
+        """
+        self.tolerance = tolerance  # Percentage tolerance for baseline comparison
+        self.max_baseline_frames = max_baseline_frames  # Number of frames to calculate baseline
+        self.baseline_frames = []  # Store y-coordinates of the hips for baseline calculation
+        self.baseline_hip_y = None # Baseline y-coordinate of the hip
+        self.lower_bound = None
+        self.upper_bound = None  
 
-def check_takeoff_condition(keypoints):
-    """
-    Check if takeoff condition is met using keypoints.
-    Takeoff occurs when the hip keypoint is higher than the baseline position with a tolerance.
-    """
-    global baseline_hip_y
-    if keypoints:
+    def update_baseline(self, hip_y):
+        """
+        Update the baseline using the first max_baseline_frames frames.
+        """
+        self.baseline_frames.append(hip_y)
+        if len(self.baseline_frames) == self.max_baseline_frames:
+            # Calculate the average y-coordinate for baseline
+            self.baseline_hip_y = sum(self.baseline_frames) / len(self.baseline_frames)
+            print(f"Baseline initialized to: {self.baseline_hip_y}")
+            self.lower_bound = self.baseline_hip_y * (1 - self.tolerance)
+            self.upper_bound = self.baseline_hip_y * (1 + self.tolerance)  # Debugging
+
+
+    def check_takeoff_condition(self, keypoints):
+        """
+        Check if takeoff condition is met using keypoints.
+        """
+        if not keypoints:
+            print("Keypoints missing or hip not detected")  # Debugging
+            return False
+
         # Assuming keypoints is a list and the hip is at index 11
         keypoints_data = keypoints[-1].xy  # (1, 17, 2) shape for 17 keypoints
 
@@ -15,54 +38,34 @@ def check_takeoff_condition(keypoints):
         left_hip = keypoints_data[0][11]  # Left hip (x, y)
         right_hip = keypoints_data[0][12]  # Right hip (x, y)
 
-        # Print hip positions
-        #print(f"Left Hip: {left_hip}")
-        #print(f"Right Hip: {right_hip}")
-
         # Compute the average y-coordinate of the hips
         avg_hip_y = (left_hip + right_hip) / 2
         hip_y = avg_hip_y[1]  # Extract y-coordinate
 
-        if baseline_hip_y is None:
-            # Initialize baseline if not already set
-            baseline_hip_y = hip_y
-            #print(f"Baseline initialized to: {baseline_hip_y}")  # Debugging
+        if self.baseline_hip_y is None:
+            # Update the baseline with the first few frames
+            self.update_baseline(hip_y)
+            return False  # Wait until baseline is initialized
 
-        # Define upper and lower bounds for the baseline with tolerance
-        lower_bound = baseline_hip_y * (1 - tolerance)
-        upper_bound = baseline_hip_y * (1 + tolerance)
+        return hip_y < self.lower_bound  # True if hip is significantly higher than baseline
 
-        #print(f"Baseline with Tolerance: {lower_bound:.2f} - {upper_bound:.2f}")
-        return hip_y < lower_bound  # True if hip is significantly higher than the baseline
-    print("Keypoints missing or hip not detected")  # Debugging
-    return False
+    def check_landing_condition(self, keypoints):
+        """
+        Check if landing condition is met using keypoints.
+        """
+        if not keypoints:
+            print("Keypoints missing or hip not detected")  # Debugging
+            return False
 
-
-def check_landing_condition(keypoints):
-    """
-    Check if landing condition is met using keypoints.
-    Landing occurs when the hip keypoint returns to the baseline position within a tolerance.
-    """
-    global baseline_hip_y
-    if keypoints:
+        # Assuming keypoints is a list and the hip is at index 11
         keypoints_data = keypoints[-1].xy  # (1, 17, 2) shape for 17 keypoints
 
         # Access left and right hip keypoints
         left_hip = keypoints_data[0][11]  # Left hip (x, y)
         right_hip = keypoints_data[0][12]  # Right hip (x, y)
 
-        # Print hip positions
-        #print(f"Left Hip: {left_hip}")
-        #print(f"Right Hip: {right_hip}")
-
         # Compute the average y-coordinate of the hips
         avg_hip_y = (left_hip + right_hip) / 2
         hip_y = avg_hip_y[1]  # Extract y-coordinate
 
-        # Define upper and lower bounds for the baseline with tolerance
-        lower_bound = baseline_hip_y * (1 - tolerance)
-        upper_bound = baseline_hip_y * (1 + tolerance)
-
-        #print(f"Baseline with Tolerance: {lower_bound:.2f} - {upper_bound:.2f}")
-        return lower_bound <= hip_y <= upper_bound  # True if hip is within baseline range
-    return False
+        return self.lower_bound <= hip_y <= self.upper_bound  # True if hip is within baseline range
