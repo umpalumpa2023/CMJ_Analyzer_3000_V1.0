@@ -24,6 +24,10 @@ def process_jump_video(video_path, yolo_detector, user_height, progress_callback
         current_frame = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
         timestamp = current_frame / fps
 
+        # Update progress
+        if progress_callback:
+            progress_callback(current_frame, frame_count)            
+
         # Run YOLO detection
         keypoints = yolo_detector.detect_keypoints(frame)
 
@@ -52,9 +56,5 @@ def process_jump_video(video_path, yolo_detector, user_height, progress_callback
             jump_detected = False
             takeoff_frame, landing_frame = None, None
 
-            # Update progress
-            if progress_callback:
-                progress_callback(current_frame, frame_count)
-
     cap.release()
-    return jumps
+    return jumps, keypoints
