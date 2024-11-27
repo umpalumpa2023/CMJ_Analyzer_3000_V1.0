@@ -31,6 +31,8 @@ def process_jump_video(video_path, yolo_detector, user_height, progress_callback
         # Run YOLO detection
         keypoints = yolo_detector.detect_keypoints(frame)
 
+        baseline = jump_analyzer.baseline_hip_y
+
         if not jump_detected and jump_analyzer.check_takeoff_condition(keypoints):
             jump_detected = True
             takeoff_frame = current_frame
@@ -57,4 +59,4 @@ def process_jump_video(video_path, yolo_detector, user_height, progress_callback
             takeoff_frame, landing_frame = None, None
 
     cap.release()
-    return jumps, keypoints
+    return jumps, keypoints, baseline

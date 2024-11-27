@@ -5,7 +5,6 @@ from config import MODEL_PATH
 from yolo_detector import YOLODetector
 import threading
 import cv2
-import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
 
 class JumpAnalysisApp:
@@ -151,7 +150,7 @@ class JumpAnalysisApp:
             print("start processing")
             print(file_path)
 
-            jumps, keypoints = process_jump_video(
+            jumps, keypoints, baseline = process_jump_video(
                 file_path, self.yolo_detector, user_height, progress_callback=update_progress)
             
             print("end processing")
@@ -161,16 +160,23 @@ class JumpAnalysisApp:
                 for i, jump in enumerate(jumps, start=1):
                     result_text += f"Jump {i}: Flight Time = {jump['flight_time']:.3f}s, Height = {jump['jump_height']:.3f}m\n"
 
-                            # Get the frames
+                    # Get the frames
                     cap.set(cv2.CAP_PROP_POS_FRAMES, jump["takeoff_frame"])
                     ret, frame_takeoff = cap.read()
+                    
                     cap.set(cv2.CAP_PROP_POS_FRAMES, jump["landing_frame"])
                     ret, frame_landing = cap.read()
+                    
 
                     if ret:
+                        height, width = frame_takeoff.shape[:2]
+                        print(baseline)
+                        frame_takeoff = cv2.line(frame_takeoff, (0, int(baseline)), (width, int(baseline)), color=(0, 255, 0), thickness=3)
+                        frame_landing = cv2.line(frame_landing, (0, int(baseline)), (width, int(baseline)), color=(0, 255, 0), thickness=3)
                         # Display annotated frames
                         self.display_in_new_window(frame_takeoff, frame_landing, i)
 
+                cap.release()
             else:
                 result_text = "No valid jumps detected."
 

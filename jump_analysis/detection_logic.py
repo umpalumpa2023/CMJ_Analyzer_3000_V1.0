@@ -1,5 +1,5 @@
 class JumpAnalyzer:
-    def __init__(self, tolerance=0.075, max_baseline_frames=5):
+    def __init__(self, tolerance=0.02, max_baseline_frames=10):
         """
         Initialize the JumpAnalyzer class with parameters for jump detection.
         """
