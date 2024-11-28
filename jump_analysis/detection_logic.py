@@ -1,5 +1,5 @@
 class JumpAnalyzer:
-    def __init__(self, tolerance=0.02, max_baseline_frames=10):
+    def __init__(self, tolerance=0.07, max_baseline_frames=10):
         """
         Initialize the JumpAnalyzer class with parameters for jump detection.
         """
@@ -20,7 +20,7 @@ class JumpAnalyzer:
             self.baseline_hip_y = sum(self.baseline_frames) / len(self.baseline_frames)
             print(f"Baseline initialized to: {self.baseline_hip_y}")
             self.lower_bound = self.baseline_hip_y * (1 - self.tolerance)
-            self.upper_bound = self.baseline_hip_y * (1 + self.tolerance)  # Debugging
+            self.upper_bound = self.baseline_hip_y * (1 + self.tolerance) 
 
 
     def check_takeoff_condition(self, keypoints):
@@ -47,7 +47,7 @@ class JumpAnalyzer:
             self.update_baseline(hip_y)
             return False  # Wait until baseline is initialized
 
-        return hip_y < self.lower_bound  # True if hip is significantly higher than baseline
+        return hip_y <= self.lower_bound  # True if hip is significantly higher than baseline
 
     def check_landing_condition(self, keypoints):
         """
@@ -68,4 +68,4 @@ class JumpAnalyzer:
         avg_hip_y = (left_hip + right_hip) / 2
         hip_y = avg_hip_y[1]  # Extract y-coordinate
 
-        return self.lower_bound <= hip_y <= self.upper_bound  # True if hip is within baseline range
+        return self.lower_bound <= hip_y <= self.baseline_hip_y # True if hip is within baseline range  

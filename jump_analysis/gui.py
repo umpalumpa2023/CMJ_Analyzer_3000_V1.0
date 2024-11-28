@@ -38,10 +38,6 @@ class JumpAnalysisApp:
         )
         self.result_label.pack(pady=10)
 
-        # Canvas for video frames
-        self.canvas = Canvas(self.root, width=480, height=640)
-        self.canvas.pack(pady=10)
-
     def display_in_new_window(self, frame_takeoff, frame_landing, i):
         # Create a new window
         new_window = tk.Toplevel(self.root)
@@ -150,9 +146,9 @@ class JumpAnalysisApp:
             print("start processing")
             print(file_path)
 
-            jumps, keypoints, baseline = process_jump_video(
+            jumps = process_jump_video(
                 file_path, self.yolo_detector, user_height, progress_callback=update_progress)
-            
+
             print("end processing")
             # Display the results
             if jumps:
@@ -166,13 +162,32 @@ class JumpAnalysisApp:
                     
                     cap.set(cv2.CAP_PROP_POS_FRAMES, jump["landing_frame"])
                     ret, frame_landing = cap.read()
-                    
+
+                    # Assuming keypoints is a list and the hip is at index 11
+                    keypoints_data_takeoff = jump["keypoints_takeoff"][-1].xy # (1, 17, 2) shape for 17 keypoints
+                    keypoints_data_landing = jump["keypoints_landing"][-1].xy
+
+                    # Access left and right hip keypoints
+                    left_hip_takeoff = keypoints_data_takeoff[0][11]  # Left hip (x, y)
+                    right_hip_takeoff = keypoints_data_takeoff[0][12]  # Right hip (x, y)
+                    left_hip_landing = keypoints_data_landing[0][11]  # Left hip (x, y)
+                    right_hip_landing = keypoints_data_landing[0][12] # Right hip (x, y)
 
                     if ret:
                         height, width = frame_takeoff.shape[:2]
-                        print(baseline)
-                        frame_takeoff = cv2.line(frame_takeoff, (0, int(baseline)), (width, int(baseline)), color=(0, 255, 0), thickness=3)
-                        frame_landing = cv2.line(frame_landing, (0, int(baseline)), (width, int(baseline)), color=(0, 255, 0), thickness=3)
+
+                        # Draw the baseline
+                        frame_takeoff = cv2.line(frame_takeoff, (0, int(jump["baseline"])), (width, int(jump["baseline"])), color=(0, 255, 0), thickness=3)
+                        frame_landing = cv2.line(frame_landing, (0, int(jump["baseline"])), (width, int(jump["baseline"])), color=(0, 255, 0), thickness=3)
+
+                        # Draw keypoints on the takeoff frame
+                        cv2.circle(frame_takeoff, tuple(map(int, left_hip_takeoff)), radius=10, color=(255, 0, 0), thickness=5)  # Left hip (blue)
+                        cv2.circle(frame_takeoff, tuple(map(int, right_hip_takeoff)), radius=10, color=(0, 0, 255), thickness=5)  # Right hip (red)
+
+                        # Draw keypoints on the landing frame
+                        cv2.circle(frame_landing, tuple(map(int, left_hip_landing)), radius=10, color=(255, 0, 0), thickness=5)  # Left hip (blue)
+                        cv2.circle(frame_landing, tuple(map(int, right_hip_landing)), radius=10, color=(0, 0, 255), thickness=5)  # Right hip (red)
+
                         # Display annotated frames
                         self.display_in_new_window(frame_takeoff, frame_landing, i)
 
