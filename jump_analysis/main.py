@@ -1,8 +1,7 @@
-from video_processor import process_jump_video
-from yolo_detector import YOLODetector
-from config import MODEL_PATH
+from gui import JumpAnalysisApp
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     # Define the video file path
     video_path = "jump_analysis/CMJ_01_001_Seite.MP4"  
     # Replace with your actual video file name
@@ -25,3 +24,8 @@ if __name__ == "__main__":
             print(f"Jump {i}: Flight Time = {jump['flight_time']:.2f}s, Height = {jump['jump_height']:.2f}m")
     else:
         print("No valid jumps detected.")
+=======
+    # Start the GUI application
+    app = JumpAnalysisApp()
+    app.run()
+>>>>>>> 55e1466f2f8d53bd47145acaba01f10f99593f4f

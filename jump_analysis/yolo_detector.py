@@ -24,11 +24,11 @@ class YOLODetector:
                     keypoints.append(keypoint_set)
 
         # Debugging: Print the structure of extracted keypoints
-        if not keypoints:
-            print("No keypoints detected.")
-        else:
-            print(f"Extracted {len(keypoints)} keypoints sets:")
-            for i, person_keypoints in enumerate(keypoints):
-                print(f"Person {i+1}: {person_keypoints}")
+        #if not keypoints:
+            #print("No keypoints detected.")
+        #else:
+            #print(f"Extracted {len(keypoints)} keypoints sets:")
+            #for i, person_keypoints in enumerate(keypoints):
+                #print(f"Person {i+1}: {person_keypoints}")
 
         return keypoints
