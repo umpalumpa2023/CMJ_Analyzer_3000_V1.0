@@ -6,6 +6,7 @@ from yolo_detector import YOLODetector
 import threading
 import cv2
 from PIL import Image, ImageTk
+from functools import partial
 
 class JumpAnalysisApp:
     def __init__(self):
@@ -37,6 +38,9 @@ class JumpAnalysisApp:
             self.root, text="", font=("Arial bold", 16), fg="white"
         )
         self.result_label.pack(pady=10)
+
+        # Placeholder for Clear Button
+        self.clear_button = None
 
     def display_in_new_window(self, frame_takeoff, frame_landing, i):
         # Create a new window
@@ -103,6 +107,31 @@ class JumpAnalysisApp:
         if file_path:
             self.analyze_video(file_path)
 
+
+    def reset_gui(self):
+        """
+        Resets the GUI to its original state.
+        """
+        # Clear result label
+        self.result_label.config(text="")
+
+        # Reset the progress bar
+        self.progress_bar["value"] = 0
+
+        # Destroy any dynamically created widgets
+        for widget in self.root.pack_slaves():
+            if widget not in (self.label, self.progress_bar, self.result_label):
+                widget.destroy()
+
+        # Hide and delete the Clear button
+        if self.clear_button:
+            self.clear_button.destroy()
+            self.clear_button = None
+
+        # Reset the instruction label
+        self.label.config(text="Click to Browse a Video File")
+
+
     def analyze_video(self, file_path):
         """
         Processes the video and displays the results.
@@ -143,63 +172,94 @@ class JumpAnalysisApp:
                 self.progress_bar["value"] = progress
 
             # Process the video
-            print("start processing")
-            print(file_path)
-
             jumps = process_jump_video(
-                file_path, self.yolo_detector, user_height, progress_callback=update_progress)
+                file_path, self.yolo_detector, user_height, progress_callback=update_progress
+            )
 
-            print("end processing")
-            # Display the results
             if jumps:
+                # Update the result label
                 result_text = f"Total Jumps Detected: {len(jumps)}\n"
+                self.result_label.config(text=result_text)
+
                 for i, jump in enumerate(jumps, start=1):
-                    result_text += f"Jump {i}: Flight Time = {jump['flight_time']:.3f}s, Height = {jump['jump_height']:.3f}m\n"
-
-                    # Get the frames
+                    # Extract frames for takeoff and landing
                     cap.set(cv2.CAP_PROP_POS_FRAMES, jump["takeoff_frame"])
-                    ret, frame_takeoff = cap.read()
-                    
+                    ret_takeoff, frame_takeoff = cap.read()
+
                     cap.set(cv2.CAP_PROP_POS_FRAMES, jump["landing_frame"])
-                    ret, frame_landing = cap.read()
+                    ret_landing, frame_landing = cap.read()
 
-                    # Assuming keypoints is a list and the hip is at index 11
-                    keypoints_data_takeoff = jump["keypoints_takeoff"][-1].xy # (1, 17, 2) shape for 17 keypoints
-                    keypoints_data_landing = jump["keypoints_landing"][-1].xy
+                    if ret_takeoff and ret_landing:
+                        # Annotate frames with keypoints and baseline
+                        keypoints_takeoff = jump["keypoints_takeoff"][-1].xy
+                        keypoints_landing = jump["keypoints_landing"][-1].xy
 
-                    # Access left and right hip keypoints
-                    left_hip_takeoff = keypoints_data_takeoff[0][11]  # Left hip (x, y)
-                    right_hip_takeoff = keypoints_data_takeoff[0][12]  # Right hip (x, y)
-                    left_hip_landing = keypoints_data_landing[0][11]  # Left hip (x, y)
-                    right_hip_landing = keypoints_data_landing[0][12] # Right hip (x, y)
+                        # Left and right hips
+                        left_hip_takeoff = keypoints_takeoff[0][11]
+                        right_hip_takeoff = keypoints_takeoff[0][12]
+                        left_hip_landing = keypoints_landing[0][11]
+                        right_hip_landing = keypoints_landing[0][12]
 
-                    if ret:
+                        # Draw the baseline and keypoints on frames
                         height, width = frame_takeoff.shape[:2]
+                        frame_takeoff = cv2.line(
+                            frame_takeoff, (0, int(jump["baseline"])),
+                            (width, int(jump["baseline"])), color=(0, 255, 0), thickness=3
+                        )
+                        frame_landing = cv2.line(
+                            frame_landing, (0, int(jump["baseline"])),
+                            (width, int(jump["baseline"])), color=(0, 255, 0), thickness=3
+                        )
+                        cv2.circle(frame_takeoff, tuple(map(int, left_hip_takeoff)), 10, (255, 0, 0), 5)
+                        cv2.circle(frame_takeoff, tuple(map(int, right_hip_takeoff)), 10, (0, 0, 255), 5)
+                        cv2.circle(frame_landing, tuple(map(int, left_hip_landing)), 10, (255, 0, 0), 5)
+                        cv2.circle(frame_landing, tuple(map(int, right_hip_landing)), 10, (0, 0, 255), 5)
 
-                        # Draw the baseline
-                        frame_takeoff = cv2.line(frame_takeoff, (0, int(jump["baseline"])), (width, int(jump["baseline"])), color=(0, 255, 0), thickness=3)
-                        frame_landing = cv2.line(frame_landing, (0, int(jump["baseline"])), (width, int(jump["baseline"])), color=(0, 255, 0), thickness=3)
-
-                        # Draw keypoints on the takeoff frame
-                        cv2.circle(frame_takeoff, tuple(map(int, left_hip_takeoff)), radius=10, color=(255, 0, 0), thickness=5)  # Left hip (blue)
-                        cv2.circle(frame_takeoff, tuple(map(int, right_hip_takeoff)), radius=10, color=(0, 0, 255), thickness=5)  # Right hip (red)
-
-                        # Draw keypoints on the landing frame
-                        cv2.circle(frame_landing, tuple(map(int, left_hip_landing)), radius=10, color=(255, 0, 0), thickness=5)  # Left hip (blue)
-                        cv2.circle(frame_landing, tuple(map(int, right_hip_landing)), radius=10, color=(0, 0, 255), thickness=5)  # Right hip (red)
-
-                        # Display annotated frames
-                        self.display_in_new_window(frame_takeoff, frame_landing, i)
+                        # Add a button for visualizing this jump
+                        self.create_result_entry(jump, frame_takeoff, frame_landing, i)
 
                 cap.release()
             else:
-                result_text = "No valid jumps detected."
-
-            self.result_label.config(text=result_text)
+                self.result_label.config(text="No valid jumps detected.")
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {str(e)}")
         finally:
             self.progress_bar["value"] = 100  # Set progress bar to full when done
+
+                # Show the Clear button once progress is complete
+            if self.clear_button is None:
+                self.clear_button = tk.Button(
+                    self.root,
+                    text="Clear",
+                    font=("Arial", 14),
+                    command=self.reset_gui,
+                )
+                self.clear_button.place(x=10, y=10)  # Position at the top-left corner
+
+
+    def create_result_entry(self, jump, frame_takeoff, frame_landing, jump_index):
+        """
+        Create a result entry with a visualization button for a specific jump.
+        """
+        # Frame to hold result text and button
+        result_frame = tk.Frame(self.root)
+        result_frame.pack(pady=5, anchor="w")
+
+        # Display result text
+        result_text = (
+            f"Jump {jump_index}: Flight Time = {jump['flight_time']:.3f}s, "
+            f"Height = {jump['jump_height']:.3f}m"
+        )
+        tk.Label(result_frame, text=result_text, font=("Arial", 12)).pack(side=tk.LEFT, padx=10)
+
+        # Button to display frames
+        view_button = tk.Button(
+            result_frame,
+            text="View Takeoff and Landing Frames",
+            command=lambda: self.display_in_new_window(frame_takeoff, frame_landing, jump_index)
+        )
+        view_button.pack(side=tk.LEFT, padx=5)
+        result_frame.pack(anchor="center") # Center the result entry
 
     def run(self):
         """
