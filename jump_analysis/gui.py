@@ -115,7 +115,7 @@ class JumpAnalysisApp:
             jumps, keypoints_array = process_jump_video(
                 file_path, user_height, progress_callback=update_progress
             )
-            #print(keypoints_array)
+            print(keypoints_array)
             # Save keypoints
             save_keypoints_to_json(data=keypoints_array, file_name="keypoints_data.json")
             
@@ -284,17 +284,6 @@ class JumpAnalysisApp:
         new_height = int(original_height * scale)
 
         return cv2.resize(frame, (new_width, new_height))
-
-                # Show the Clear button once progress is complete
-            if self.clear_button is None:
-                self.clear_button = tk.Button(
-                    self.root,
-                    text="Clear",
-                    font=("Arial", 14),
-                    command=self.reset_gui,
-                )
-                self.clear_button.place(x=10, y=10)  # Position at the top-left corner
-
 
     def create_result_entry(self, jump, frame_takeoff, frame_landing, jump_index):
         """
