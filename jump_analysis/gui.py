@@ -6,6 +6,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import filedialog, messagebox, ttk, Canvas
 from video_processor import process_jump_video, save_keypoints_to_json
 from PIL import Image, ImageTk
+from functools import partial
 
 class JumpAnalysisApp:
     def __init__(self):
@@ -59,6 +60,31 @@ class JumpAnalysisApp:
         if file_path:
             self.analyze_video(file_path)
 
+
+    def reset_gui(self):
+        """
+        Resets the GUI to its original state.
+        """
+        # Clear result label
+        self.result_label.config(text="")
+
+        # Reset the progress bar
+        self.progress_bar["value"] = 0
+
+        # Destroy any dynamically created widgets
+        for widget in self.root.pack_slaves():
+            if widget not in (self.label, self.progress_bar, self.result_label):
+                widget.destroy()
+
+        # Hide and delete the Clear button
+        if self.clear_button:
+            self.clear_button.destroy()
+            self.clear_button = None
+
+        # Reset the instruction label
+        self.label.config(text="Click to Browse a Video File")
+
+
     def analyze_video(self, file_path):
         """
         Processes the video and displays the results.
@@ -94,6 +120,7 @@ class JumpAnalysisApp:
             save_keypoints_to_json(data=keypoints_array, file_name="keypoints_data.json")
             
             if jumps:
+                # Update the result label
                 result_text = f"Total Jumps Detected: {len(jumps)}\n"
                 y_positions_left_hip, y_positions_right_hip = [], []
                 confidences_left_hip, confidences_right_hip = [], []
@@ -108,18 +135,31 @@ class JumpAnalysisApp:
                     cap.set(cv2.CAP_PROP_POS_FRAMES, jump["landing_frame"])
                     ret_landing, frame_landing = cap.read()
 
-                    # Assuming keypoints is a list and the hip is at index 11
-                    keypoints_data_takeoff = jump["keypoints_takeoff"][-1].xy # (1, 17, 2) shape for 17 keypoints
-                    keypoints_data_landing = jump["keypoints_landing"][-1].xy
+                    if ret_takeoff and ret_landing:
+                        # Annotate frames with keypoints and baseline
+                        keypoints_takeoff = jump["keypoints_takeoff"][-1].xy
+                        keypoints_landing = jump["keypoints_landing"][-1].xy
 
-                    # Access left and right hip keypoints
-                    left_hip_takeoff = keypoints_data_takeoff[0][11]  # Left hip (x, y)
-                    right_hip_takeoff = keypoints_data_takeoff[0][12]  # Right hip (x, y)
-                    left_hip_landing = keypoints_data_landing[0][11]  # Left hip (x, y)
-                    right_hip_landing = keypoints_data_landing[0][12] # Right hip (x, y)
+                        # Left and right hips
+                        left_hip_takeoff = keypoints_takeoff[0][11]
+                        right_hip_takeoff = keypoints_takeoff[0][12]
+                        left_hip_landing = keypoints_landing[0][11]
+                        right_hip_landing = keypoints_landing[0][12]
 
                     if ret_takeoff and ret_landing:
                         height, width = frame_takeoff.shape[:2]
+                        frame_takeoff = cv2.line(
+                            frame_takeoff, (0, int(jump["baseline"])),
+                            (width, int(jump["baseline"])), color=(0, 255, 0), thickness=3
+                        )
+                        frame_landing = cv2.line(
+                            frame_landing, (0, int(jump["baseline"])),
+                            (width, int(jump["baseline"])), color=(0, 255, 0), thickness=3
+                        )
+                        cv2.circle(frame_takeoff, tuple(map(int, left_hip_takeoff)), 10, (255, 0, 0), 5)
+                        cv2.circle(frame_takeoff, tuple(map(int, right_hip_takeoff)), 10, (0, 0, 255), 5)
+                        cv2.circle(frame_landing, tuple(map(int, left_hip_landing)), 10, (255, 0, 0), 5)
+                        cv2.circle(frame_landing, tuple(map(int, right_hip_landing)), 10, (0, 0, 255), 5)
 
                         # Draw the baseline
                         frame_takeoff = cv2.line(frame_takeoff, (0, int(jump["baseline"])), (width, int(jump["baseline"])), color=(0, 255, 0), thickness=3)
@@ -244,6 +284,41 @@ class JumpAnalysisApp:
         new_height = int(original_height * scale)
 
         return cv2.resize(frame, (new_width, new_height))
+
+                # Show the Clear button once progress is complete
+            if self.clear_button is None:
+                self.clear_button = tk.Button(
+                    self.root,
+                    text="Clear",
+                    font=("Arial", 14),
+                    command=self.reset_gui,
+                )
+                self.clear_button.place(x=10, y=10)  # Position at the top-left corner
+
+
+    def create_result_entry(self, jump, frame_takeoff, frame_landing, jump_index):
+        """
+        Create a result entry with a visualization button for a specific jump.
+        """
+        # Frame to hold result text and button
+        result_frame = tk.Frame(self.root)
+        result_frame.pack(pady=5, anchor="w")
+
+        # Display result text
+        result_text = (
+            f"Jump {jump_index}: Flight Time = {jump['flight_time']:.3f}s, "
+            f"Height = {jump['jump_height']:.3f}m"
+        )
+        tk.Label(result_frame, text=result_text, font=("Arial", 12)).pack(side=tk.LEFT, padx=10)
+
+        # Button to display frames
+        view_button = tk.Button(
+            result_frame,
+            text="View Takeoff and Landing Frames",
+            command=lambda: self.display_in_new_window(frame_takeoff, frame_landing, jump_index)
+        )
+        view_button.pack(side=tk.LEFT, padx=5)
+        result_frame.pack(anchor="center") # Center the result entry
 
     def run(self):
         """
