@@ -1,10 +1,10 @@
 from ultralytics import YOLO
-import numpy as np
 
 class YOLODetector:
     def __init__(self, model_path):
         # Load the YOLO model
         self.model = YOLO(model_path)
+        self.keypoints_array = []
 
     def detect_keypoints(self, frame):
         # Run the YOLO model on the frame
@@ -30,5 +30,5 @@ class YOLODetector:
             #print(f"Extracted {len(keypoints)} keypoints sets:")
             #for i, person_keypoints in enumerate(keypoints):
                 #print(f"Person {i+1}: {person_keypoints}")
-
+            self.keypoints_array.append(keypoints)
         return keypoints
